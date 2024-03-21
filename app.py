@@ -44,6 +44,10 @@ def log_request(func):
         wrapper.__name__=f"{func.__name__}-wrapped"
         create_table()
         ip_address = request.remote_addr
+        try:
+            ip_address = request.headers['X-Real-IP']
+        except:
+            print('unable to extract ip', request.headers)
         ip_address = hash_ip(ip_address)
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
