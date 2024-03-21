@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>speak-easy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .user-message {
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: right;
+        }
+        .ai-message {
+            background-color: #cbeeff;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .input-container {
+            margin-top: 20px;
+            display: flex;
+        }
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        input[type="submit"] {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+    </style>
+    <script>
+            function generateRandomString() {
+                return Math.random().toString(36).substring(7);
+            }
+
+            function toggleTranslation(spanId) {
+                const translationSpan = document.getElementById(spanId);
+                if (translationSpan.style.display === 'none') {
+                    translationSpan.style.display = 'inline'; // Show translation
+                    // Here you can add code to fetch and populate the translation using the Google Translate API
+                } else {
+                    translationSpan.style.display = 'none'; // Hide translation
+                }
+            }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="conversation">
+            <!-- Conversation messages will be displayed here -->
+        </div>
+        <form id="message-form">
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <input type="submit" value="Send">
+                <input type="submit" value="Translate">
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const conversationDiv = document.querySelector('.conversation');
+            const messageForm = document.getElementById('message-form');
+            const userInput = document.getElementById('user-input');
+
+            messageForm.addEventListener('click', async function (event) {
+                event.preventDefault();
+                const userMessage = userInput.value;
+
+                let response;
+                console.log(event.target, event.target.value)
+                if (event.target.value == 'Send') {
+                    console.log('using /send')
+                    appendMessage('user', userMessage);
+                    userInput.value = '';
+                    response = await sendMessage(userMessage, '/ask');
+                } else if (event.target.value == 'Translate') {
+                    console.log('using /translate_and ask')
+                    appendMessage('user', userMessage);
+                    userInput.value = '';
+                    response = await sendMessage(userMessage, '/translate_and_ask');
+                    appendMessage('user', response.translated_user_input);
+
+                } else {
+                    return
+                }
+                const aiMessage = response.response;
+                appendMessage('ai', aiMessage, response.english);
+            });
+
+            async function sendMessage(message, url) {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ input: message })
+                });
+                return await response.json();
+            }
+
+
+
+            function appendMessage(role, message, translation) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                let randomString = generateRandomString();
+
+                if (role === 'user') {
+                    messageDiv.innerHTML = `
+                        <div class="user-message">
+                            <span>${message}</span>
+                        </div>
+                    `;
+                } else if (role === 'ai') {
+                    messageDiv.innerHTML = `
+                    <div class="ai-message">
+                            <span>${message}</span>
+                            <button onclick="toggleTranslation('${randomString}')">Translate</button>
+                            <span id="${randomString}" style="display: none;">${translation}</span>
+                        </div>
+                    `
+                }
+
+                conversationDiv.appendChild(messageDiv);
+                conversationDiv.scrollTop = conversationDiv.scrollHeight; // Scroll to bottom
+            }
+        });
+    </script>
+</body>
+</html>
