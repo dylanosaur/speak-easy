@@ -9,6 +9,31 @@ from openai import OpenAI
 client = OpenAI()
 
 
+
+import logging
+from datetime import datetime
+
+def create_custom_logger(filename):
+    # Create a logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
+    # Create a file handler
+    log_format = '%(asctime)s - %(levelname)s - %(message)s'
+    file_handler = logging.FileHandler(filename)
+    file_handler.setLevel(logging.DEBUG)
+
+    # Create a formatter and add it to the handler
+    formatter = logging.Formatter(log_format, datefmt='%Y-%m-%d %H:%M:%S')
+    file_handler.setFormatter(formatter)
+
+    # Add the file handler to the logger
+    logger.addHandler(file_handler)
+
+    return logger
+
+app_logger = create_custom_logger('app.log')
+
 app = Flask(__name__)
 
 
@@ -39,9 +64,10 @@ def create_table():
     conn.commit()
     conn.close()
 
+from functools import wraps
 def log_request(func):
-    def wrapper(*args, **kwargs):
-        wrapper.__name__=f"{func.__name__}-wrapped"
+    @wraps(func)
+    def wrapper(*args, **kwargs):        
         create_table()
         ip_address = request.remote_addr
         try:
@@ -103,13 +129,16 @@ def generate_gpt_response(user_input, target_language="spanish"):
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": f"You are a tool to help someone learn {target_language}. Just respond in {target_language} and continue the conversation."},
+            {"role": "system", "content": f"You are a tool to help someone learn {target_language}. \
+                Just respond in {target_language} and continue the conversation. \
+                Use beginner-intermediate level words and phrases and limit your response to one sentence and then one question"},
             {"role": "user", "content": user_input}
         ]
     )
 
     text_response = completion.choices[0].message.content
 
+    app_logger.debug(f'lang {target_language} user input {user_input} has response {text_response}')
     return text_response, comment
 
 
@@ -148,6 +177,7 @@ def ask():
 
 # Main route for receiving user input and generating responses
 @app.route('/translate_and_ask', methods=['POST'])
+@log_request
 def translate_and_ask():
     data = request.get_json()
     user_input = data['input']
