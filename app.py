@@ -143,7 +143,14 @@ def generate_gpt_response(user_input, target_language="spanish"):
     )
     session['conversation'] = json.dumps(conversation)
     
-    app_logger.debug(f'lang {target_language} user input {user_input} has response {text_response}')
+    user_ip = '<ip>'
+    try:
+        user_ip_raw = request.headers['X-Real-IP']
+        user_ip = hash_ip(user_ip_raw)[:6]
+    except:
+        pass
+
+    app_logger.debug(f'{user_ip} - lang {target_language} user input {user_input} has response {text_response}')
     return text_response, 'empty comment'
 
 
