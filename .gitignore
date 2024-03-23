@@ -2,3 +2,4 @@
 venv/
 app.log
 requests.db
+app*.log

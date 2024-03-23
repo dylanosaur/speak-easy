@@ -8,7 +8,9 @@ load_dotenv()
 from openai import OpenAI
 client = OpenAI()
 
-
+import subprocess
+build_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'])[:6].decode()
+print('build hash', build_hash)
 
 import logging
 from datetime import datetime
@@ -32,7 +34,7 @@ def create_custom_logger(filename):
 
     return logger
 
-app_logger = create_custom_logger('app.log')
+app_logger = create_custom_logger(f'app-{build_hash}.log')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -60,7 +62,7 @@ def create_table():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS requests
-                 (ip TEXT PRIMARY KEY, count INTEGER)''')
+                 (ip TEXT PRIMARY KEY, count INTEGER, build TEXT)''')
     conn.commit()
     conn.close()
 
@@ -88,7 +90,7 @@ def log_request(func):
             c.execute("UPDATE requests SET count=? WHERE ip=?", (count, ip_address))
         else:
             # If IP doesn't exist, insert a new record with count=1
-            c.execute("INSERT INTO requests VALUES (?, 1)", (ip_address,))
+            c.execute("INSERT INTO requests VALUES (?, 1, ?)", (ip_address,build_hash))
         
         conn.commit()
         conn.close()
@@ -150,7 +152,7 @@ def generate_gpt_response(user_input, target_language="spanish"):
     except:
         pass
 
-    app_logger.debug(f'{user_ip} - lang {target_language} user input {user_input} has response {text_response}')
+    app_logger.debug(f'ip:{user_ip} - lang:{target_language} - input: {user_input} - response: {text_response}')
     return text_response, 'empty comment'
 
 
