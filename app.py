@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session
 import os
 
 from dotenv import load_dotenv
@@ -35,7 +35,7 @@ def create_custom_logger(filename):
 app_logger = create_custom_logger('app.log')
 
 app = Flask(__name__)
-
+app.config['SECRET_KEY'] = os.urandom(24)
 
 import hashlib
 
@@ -111,35 +111,40 @@ def translate_text(text, target_language='en'):
     text_response = completion.choices[0].message.content
     return text_response
 
+import json
 
 def generate_gpt_response(user_input, target_language="spanish"):
 
-    print('generating response using', target_language)
-    # Generate a response from ChatGPT
-    completion_comment = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": f"You are a tool to help someone learn {target_language}. Point out any grammar errors in the user input or say 'no comment' "},
-            {"role": "user", "content": user_input}
-        ]
+    if 'conversation' not in session:
+        session['conversation'] = json.dumps({"data":
+            [
+                {"role": "system", "content": f"You are a tool to help someone learn {target_language}. \
+                Just respond in {target_language} and continue the conversation. \
+                Use beginner-intermediate level words and phrases and limit your response to one sentence and then one question"},
+            ]
+        })
+
+    conversation = json.loads(session['conversation'])
+    conversation['data'].append(
+        {"role": "user", "content": user_input}
     )
 
-    comment = completion_comment.choices[0].message.content
+    print('generating response using', target_language)
 
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": f"You are a tool to help someone learn {target_language}. \
-                Just respond in {target_language} and continue the conversation. \
-                Use beginner-intermediate level words and phrases and limit your response to one sentence and then one question"},
-            {"role": "user", "content": user_input}
-        ]
+        messages=conversation['data']
     )
 
     text_response = completion.choices[0].message.content
 
+    conversation['data'].append(
+        {"role": "user", "content": text_response}
+    )
+    session['conversation'] = json.dumps(conversation)
+    
     app_logger.debug(f'lang {target_language} user input {user_input} has response {text_response}')
-    return text_response, comment
+    return text_response, 'empty comment'
 
 
 def get_logged_results():
