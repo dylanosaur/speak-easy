@@ -313,6 +313,8 @@ def clear_conversation():
 
 @app.route('/', methods=['GET'])
 def index():
+    if 'conversation' in session:
+        del session['conversation']
     return render_template('index.html')
 
 # Main method to run the Flask app
