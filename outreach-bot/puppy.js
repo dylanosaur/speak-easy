@@ -4,10 +4,11 @@ const fs = require('fs');
 
 const axios = require('axios');
 
-async function sendPostRequest(user_input) {
+async function sendPostRequest(user_input, url) {
   try {
     const response = await axios.post('http://localhost:5000/reddit_response', {
-      input: user_input
+      input: user_input,
+      url: url
     });
 
     console.log(response.data); // Assuming the response is JSON data
@@ -36,7 +37,24 @@ function pickRandomElement(array) {
     'languagelearning',
     'languagelearningjerk',
     'LearnSpanishInReddit',
-    'duolingo'
+    'duolingo',
+    'language',
+    'language_exchange',
+    'Language_Exchange',
+    'LanguageExchange',
+    'LanguageTechnology',
+    'LanguageBuds',
+    'LatinLanguage',
+    'LearnANewLanguage',
+    'German',
+    'Russian',
+    'translator',
+    'HindiLanguage',
+    'French',
+    'FrenchMemes',
+    'learnfrench',
+    'FrenchImmersion',
+    'easy_french'
   ]
 
   const browser = await puppeteer.launch({
@@ -45,12 +63,22 @@ function pickRandomElement(array) {
   }); // Launch browser
   let page = await browser.newPage(); // Create a new page
 
+  await page.setViewport({ width: 1200, height: 800 });
+
+
   page = await loginToReddit(page, username, password, 'Spanish');
 
-  for (let i=0; i<5; i++) {
+  for (let i=0; i<90; i++) {
 
     let subreddit = pickRandomElement(subreddits)
-    await makeAComment(page, subreddit);
+    let success = await makeAComment(page, subreddit);
+    if (success) {
+      let sleepTimeSecondsMin = 60
+      let sleepTimeSecondsMax = 240
+      const randomSleepTime = Math.floor(Math.random() * (sleepTimeSecondsMax - sleepTimeSecondsMin)) + sleepTimeSecondsMin;
+  
+      await new Promise(resolve => setTimeout(resolve, randomSleepTime*1000));
+    }
 
   }
 
@@ -62,9 +90,6 @@ function uniqueStrings(array) {
 }
 
 async function loginToReddit(page, username, password, subreddit) {
-
-
-  await page.setViewport({ width: 1200, height: 800 });
 
   // await page.setUserAgent('Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0');
 
@@ -103,6 +128,7 @@ async function makeAComment(page, subreddit) {
     // let subreddit = 'Spanish'
     // let threadIndex = 2;
 
+    let activeUrl = ''
     while (retryCount < 3) { // Retry up to 3 times
       try {
         await page.goto(`https://www.reddit.com/r/${subreddit}/`, { waitUntil: 'networkidle0' });
@@ -134,7 +160,7 @@ async function makeAComment(page, subreddit) {
         }
 
         let randomThreadUrl = pickRandomThread(prefixedUrls)
-
+        activeUrl = randomThreadUrl
         // Click on the nth post in the subreddit
         await Promise.all([
           page.goto(randomThreadUrl),
@@ -157,16 +183,27 @@ async function makeAComment(page, subreddit) {
     });
     console.log('h1', text)
 
-
-    gpt_input = `community: ${subreddit} title ${text}`
-    let gpt_comment = await sendPostRequest(text)
+    // post content from the p tags
+    const postText = await page.evaluate(() => {
+      const pTags = Array.from(document.querySelectorAll('p')).slice(0, 5);
+      return pTags.map(p => p.textContent.trim());
+    });
 
 
     // step three make the comment
     const replyButtons = await page.waitForSelector('button ::-p-text(Reply)');
     console.log(replyButtons)
 
-    await replyButtons.click()
+    const commentContainer = await page.evaluate(replyButtons => {
+      return replyButtons.parentElement.parentElement.parentElement.textContent.trim();
+    }, replyButtons);
+
+    console.log(commentContainer)
+
+    gpt_input = `community: ${subreddit} title ${text} post text ${postText} reply to this comment ${commentContainer}`
+    let gpt_comment = await sendPostRequest(gpt_input, activeUrl)
+    console.log('gpt comment', gpt_comment)
+
 
     // // Click on the first comment to respond
 
@@ -177,6 +214,11 @@ async function makeAComment(page, subreddit) {
     const textInput5 = await page.waitForSelector('.public-DraftEditor-content div div div div span')
     console.log('container4', textInput5)
 
+    await replyButtons.click()
+
+    await new Promise(resolve => setTimeout(resolve, 10*1000));
+
+
     await textInput5.type(gpt_comment)
 
     await page.keyboard.press('Tab');
@@ -185,9 +227,10 @@ async function makeAComment(page, subreddit) {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log('Response submitted successfully!');
-
+    return true;
 
   } catch (error) {
     console.error('An error occurred:', error);
+    return false;
   }
 }

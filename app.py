@@ -43,8 +43,53 @@ def create_table():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS requests
                  (ip TEXT PRIMARY KEY, count INTEGER, build TEXT)''')
+    # Create the ThreadComments table if it doesn't exist
+    c.execute('''CREATE TABLE IF NOT EXISTS ThreadComments
+             (id INTEGER PRIMARY KEY, url TEXT, input TEXT, comment TEXT)''')
+
     conn.commit()
     conn.close()
+
+create_table()
+
+# Function to insert a comment into the database
+def insert_comment(url, input_text, comment_text):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT INTO ThreadComments (url, input, comment) VALUES (?, ?, ?)", (url, input_text, comment_text))
+    conn.commit()
+    conn.close()
+    print('comment added', url, input_text, comment_text)
+
+# Function to read and print all comments from the database
+def print_all_comments():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT * FROM ThreadComments")
+    comments = c.fetchall()
+    for comment in comments:
+        print(f"ID: {comment[0]}, URL: {comment[1]}, Input: {comment[2]}, Comment: {comment[3]}")
+    conn.close()
+
+# Function to return the count of comments
+def count_comments():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM ThreadComments")
+    count = c.fetchone()[0]
+    conn.close()
+
+    return count
+
+def check_url_existence(url):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM ThreadComments WHERE url=?", (url,))
+    result = c.fetchone()[0]
+
+    conn.close()
+
+    return result > 0
 
 from functools import wraps
 def log_request(func):
@@ -135,23 +180,32 @@ def generate_gpt_response(user_input, target_language="spanish"):
     app_logger.debug(f'ip:{user_ip} - lang:{target_language} - input: {user_input} - response: {text_response}')
     return text_response, 'empty comment'
 
-def generate_gpt_response_reddit_comment(user_input):
+def generate_gpt_response_reddit_comment(user_input, recommend_speak_easy=False):
 
     messages = [
         {"role": "system", "content": f"You are helping me train an anti bot detection system. The user input\
             will be a thread on a social media site. You should generate a reasonable comment for the topic. \
             Try to shorter sentences as if you were typing them out on a phone and you dont care much. \
-            You are encouraged to be a little blunt and direct, and its okay if you lightly criticize the topic.\
-            The user you are responding to should feel neutral to happy when they read your comment. be nice."},
+            You are encouraged to be a little blunt and direct, and its okay if you lightly criticize the topic or slightly disagree with the other comment.\
+            No exclamation punctuation.\
+            Limit your response to a single sentence. Try not to repeat any of the words they use in their comment. \
+            Your comment should contribute a fresh idea to the conversation"},
         {"role": "user", "content": user_input}
     ]
 
+    if recommend_speak_easy:
+        messages[0]['content'] += "If they might benefit from a language learning tool then suggest that\
+            try out https://speak-ez.net where they can practice learning a new language by having conversations. \
+            you must use the URL as provided."
+        
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages
     )
 
     text_response = completion.choices[0].message.content
+
+    text_response = text_response.replace("!", ".").replace("SpeakEZ", "https://speak-ez.net")
 
     return text_response
 
@@ -209,11 +263,41 @@ def translate_and_ask():
 def reddit_response():
     data = request.get_json()
     user_input = data['input']
+    url = data['url']
 
-    text_response = generate_gpt_response_reddit_comment(user_input)
+    url_already_processed = check_url_existence(url)
+    if url_already_processed:
+        print('url has already been processed', url)
+        text_response = None
+    else:
+        comment_count = count_comments()
+        recommend_enabled = comment_count % 5 == 0
+        print('recommend is enabled', recommend_enabled, comment_count)
+        text_response = generate_gpt_response_reddit_comment(user_input, recommend_speak_easy=recommend_enabled)
+
+        insert_comment(url, user_input, text_response)
 
     # Return the response to the user
     return jsonify({"response": text_response})
+
+
+# Route to display the ThreadComments in a table
+@app.route('/thread_comments')
+def show_comments():
+    # Connect to the SQLite database
+    conn = sqlite3.connect('requests.db')
+    c = conn.cursor()
+
+    # Query the database to fetch ThreadComments
+    c.execute("SELECT * FROM ThreadComments")
+    comments = c.fetchall()
+
+    # Close the database connection
+    conn.close()
+
+    # Render the HTML template with comments data
+    return render_template('comments.html', comments=comments)
+
 
 # Route for retrieving conversation history
 @app.route('/conversation', methods=['GET'])

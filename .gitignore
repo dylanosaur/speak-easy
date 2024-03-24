@@ -5,3 +5,5 @@ requests.db
 app*.log
 logs/*.log
 outreach-bot/node_modules/
+outreach-bot/screenshot.png
+__pycache__/
