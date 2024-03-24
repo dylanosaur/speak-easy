@@ -12,27 +12,7 @@ import subprocess
 build_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'])[:6].decode()
 print('build hash', build_hash)
 
-import logging
-from datetime import datetime
-
-def create_custom_logger(filename):
-    # Create a logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-
-    # Create a file handler
-    log_format = '%(asctime)s - %(levelname)s - %(message)s'
-    file_handler = logging.FileHandler(filename)
-    file_handler.setLevel(logging.DEBUG)
-
-    # Create a formatter and add it to the handler
-    formatter = logging.Formatter(log_format, datefmt='%Y-%m-%d %H:%M:%S')
-    file_handler.setFormatter(formatter)
-
-    # Add the file handler to the logger
-    logger.addHandler(file_handler)
-
-    return logger
+from logger import create_custom_logger
 
 app_logger = create_custom_logger(f'app-{build_hash}.log')
 
@@ -155,6 +135,25 @@ def generate_gpt_response(user_input, target_language="spanish"):
     app_logger.debug(f'ip:{user_ip} - lang:{target_language} - input: {user_input} - response: {text_response}')
     return text_response, 'empty comment'
 
+def generate_gpt_response_reddit_comment(user_input):
+
+    messages = [
+        {"role": "system", "content": f"You are helping me train an anti bot detection system. The user input\
+            will be a thread on a social media site. You should generate a reasonable comment for the topic. \
+            Try to shorter sentences as if you were typing them out on a phone and you dont care much. \
+            You are encouraged to be a little blunt and direct, and its okay if you lightly criticize the topic.\
+            The user you are responding to should feel neutral to happy when they read your comment. be nice."},
+        {"role": "user", "content": user_input}
+    ]
+
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages
+    )
+
+    text_response = completion.choices[0].message.content
+
+    return text_response
 
 def get_logged_results():
     conn = sqlite3.connect(DB_FILE)
@@ -204,6 +203,17 @@ def translate_and_ask():
     # Return the response to the user
     return jsonify({"response": text_response, "english": translate_text(text_response), "comment": comment, 'translated_user_input': translated_input})
 
+
+# Main route for receiving user input and generating responses
+@app.route('/reddit_response', methods=['POST'])
+def reddit_response():
+    data = request.get_json()
+    user_input = data['input']
+
+    text_response = generate_gpt_response_reddit_comment(user_input)
+
+    # Return the response to the user
+    return jsonify({"response": text_response})
 
 # Route for retrieving conversation history
 @app.route('/conversation', methods=['GET'])

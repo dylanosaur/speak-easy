@@ -3,3 +3,5 @@ venv/
 app.log
 requests.db
 app*.log
+logs/*.log
+outreach-bot/node_modules/
