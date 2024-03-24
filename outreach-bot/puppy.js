@@ -34,20 +34,16 @@ function pickRandomElement(array) {
     'Spanish',
     'Spanishhelp',
     'learnspanish',
-    'languagelearning',
     'languagelearningjerk',
     'LearnSpanishInReddit',
     'duolingo',
     'language',
     'language_exchange',
     'Language_Exchange',
-    'LanguageExchange',
     'LanguageTechnology',
     'LanguageBuds',
     'LatinLanguage',
     'LearnANewLanguage',
-    'German',
-    'Russian',
     'translator',
     'HindiLanguage',
     'French',
@@ -68,13 +64,13 @@ function pickRandomElement(array) {
 
   page = await loginToReddit(page, username, password, 'Spanish');
 
-  for (let i=0; i<90; i++) {
+  for (let i=0; i<900; i++) {
 
     let subreddit = pickRandomElement(subreddits)
     let success = await makeAComment(page, subreddit);
     if (success) {
-      let sleepTimeSecondsMin = 60
-      let sleepTimeSecondsMax = 240
+      let sleepTimeSecondsMin = 100
+      let sleepTimeSecondsMax = 300
       const randomSleepTime = Math.floor(Math.random() * (sleepTimeSecondsMax - sleepTimeSecondsMin)) + sleepTimeSecondsMin;
   
       await new Promise(resolve => setTimeout(resolve, randomSleepTime*1000));
@@ -131,7 +127,7 @@ async function makeAComment(page, subreddit) {
     let activeUrl = ''
     while (retryCount < 3) { // Retry up to 3 times
       try {
-        await page.goto(`https://www.reddit.com/r/${subreddit}/`, { waitUntil: 'networkidle0' });
+        await page.goto(`https://www.reddit.com/r/${subreddit}/new`, { waitUntil: 'networkidle0' });
 
         const aTags = await page.$$eval('a', anchors => anchors.map(anchor => anchor.outerHTML));
         // console.log(aTags)

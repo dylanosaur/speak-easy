@@ -188,7 +188,7 @@ def generate_gpt_response_reddit_comment(user_input, recommend_speak_easy=False)
             Try to shorter sentences as if you were typing them out on a phone and you dont care much. \
             You are encouraged to be a little blunt and direct, and its okay if you lightly criticize the topic or slightly disagree with the other comment.\
             No exclamation punctuation.\
-            Limit your response to a single sentence. Try not to repeat any of the words they use in their comment. \
+            Limit your response to 1-2 sentences. Try not to repeat any of the words they use in their comment. \
             Your comment should contribute a fresh idea to the conversation"},
         {"role": "user", "content": user_input}
     ]
@@ -196,7 +196,9 @@ def generate_gpt_response_reddit_comment(user_input, recommend_speak_easy=False)
     if recommend_speak_easy:
         messages[0]['content'] += "If they might benefit from a language learning tool then suggest that\
             try out https://speak-ez.net where they can practice learning a new language by having conversations. \
-            you must use the URL as provided."
+            you must use the URL as provided. Tell them something like \
+            'i spun up this tiny website a few weeks ago and am hoping i can help people learn a new language by having conversations. \
+            give it a try and if you have feedback id love to hear it!' "
         
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -205,7 +207,7 @@ def generate_gpt_response_reddit_comment(user_input, recommend_speak_easy=False)
 
     text_response = completion.choices[0].message.content
 
-    text_response = text_response.replace("!", ".").replace("SpeakEZ", "https://speak-ez.net")
+    text_response = text_response.replace("!", ".").replace("SpeakEZ", "https://speak-ez.net").replace('"', '').replace("'", "")
 
     return text_response
 
