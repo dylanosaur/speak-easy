@@ -12,7 +12,10 @@
             margin: 0;
             padding: 0;
             background-color: #f4f4f4;
-        }
+        }@app.route('/referer-test', methods=['GET'])
+def referer_test():
+    return '<a href="http://localhost:5000">link</a>'
+
         .container {
             max-width: 800px;
             margin: 50px auto;
@@ -96,6 +99,7 @@
             <option value="bn-bengali">Bengali</option>
             <option value="de-german">German</option>
             <option value="ja-japanese">Japanese</option>
+            <option value="en-english">English</option>
 
             <!-- You can add more options for other languages as needed -->
         </select>
