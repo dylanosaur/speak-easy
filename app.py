@@ -15,6 +15,7 @@ print('build hash', build_hash)
 from logger import create_custom_logger
 
 app_logger = create_custom_logger(f'app-{build_hash}.log')
+headers_logger = create_custom_logger(f'headers.log')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -315,6 +316,10 @@ def clear_conversation():
 
 @app.route('/', methods=['GET'])
 def index():
+    try:
+        headers_logger.debug(json.dumps(dict(request.headers)))
+    except Exception as ex:
+        print('unable to log headers', ex)
     if 'conversation' in session:
         del session['conversation']
     return render_template('index.html')
