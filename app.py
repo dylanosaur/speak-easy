@@ -46,7 +46,7 @@ def create_table():
                  (ip TEXT PRIMARY KEY, count INTEGER, build TEXT)''')
     # Create the ThreadComments table if it doesn't exist
     c.execute('''CREATE TABLE IF NOT EXISTS ThreadComments
-             (id INTEGER PRIMARY KEY, url TEXT, input TEXT, comment TEXT)''')
+             (id INTEGER PRIMARY KEY, url TEXT, input TEXT, comment TEXT, success INTEGER)''')
 
     conn.commit()
     conn.close()
@@ -57,7 +57,7 @@ create_table()
 def insert_comment(url, input_text, comment_text):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("INSERT INTO ThreadComments (url, input, comment) VALUES (?, ?, ?)", (url, input_text, comment_text))
+    c.execute("INSERT INTO ThreadComments (url, input, comment, success) VALUES (?, ?, ?, ?)", (url, input_text, comment_text, 0))
     conn.commit()
     conn.close()
     print('comment added', url, input_text, comment_text)
@@ -85,9 +85,21 @@ def count_comments():
 def check_url_existence(url):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM ThreadComments WHERE url=?", (url,))
+    c.execute("SELECT COUNT(*) FROM ThreadComments WHERE url=? AND success=1", (url,))
     result = c.fetchone()[0]
 
+    conn.close()
+
+    return result > 0
+
+def mark_url_as_success(url):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM ThreadComments WHERE url=? AND success=0", (url,))
+    result = c.fetchone()[0]
+    if result > 0:
+        c.execute("UPDATE ThreadComments SET success = 1 WHERE url=?", (url,))
+        conn.commit()  # Commit the transaction
     conn.close()
 
     return result > 0
@@ -274,7 +286,7 @@ def reddit_response():
         text_response = None
     else:
         comment_count = count_comments()
-        recommend_enabled = comment_count % 5 == 0
+        recommend_enabled = comment_count % 30 == 0
         print('recommend is enabled', recommend_enabled, comment_count)
         text_response = generate_gpt_response_reddit_comment(user_input, recommend_speak_easy=recommend_enabled)
 
@@ -283,6 +295,13 @@ def reddit_response():
     # Return the response to the user
     return jsonify({"response": text_response})
 
+@app.route('/reddit_response_success', methods=['POST'])
+def reddit_response_success():
+    data = request.get_json()
+    url = data['url']
+
+    mark_url_as_success(url)
+    return jsonify({"data": "success"})
 
 # Route to display the ThreadComments in a table
 @app.route('/thread_comments')
@@ -323,6 +342,30 @@ def index():
     if 'conversation' in session:
         del session['conversation']
     return render_template('index.html')
+
+
+from flask import Flask, render_template, make_response
+import datetime
+
+app = Flask(__name__)
+
+@app.route('/sitemap.xml')
+def sitemap():
+    # Current date in ISO 8601 format
+    lastmod = datetime.datetime.now().isoformat()
+    
+    # Render the sitemap template
+    sitemap_xml = render_template('sitemap.xml', lastmod=lastmod)
+    
+    # Create a response with the XML content type
+    response = make_response(sitemap_xml)
+    response.headers["Content-Type"] = "application/xml"
+    
+    return response
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
 
 # Main method to run the Flask app
 if __name__ == '__main__':

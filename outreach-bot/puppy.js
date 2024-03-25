@@ -18,6 +18,19 @@ async function sendPostRequest(user_input, url) {
   }
 }
 
+async function markUrlAsSuccess(url) {
+  try {
+    const response = await axios.post('http://localhost:5000/reddit_response_success', {
+      url: url
+    });
+
+    console.log(response.data); // Assuming the response is JSON data
+    return response
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
 function pickRandomElement(array) {
   const randomIndex = Math.floor(Math.random() * array.length);
   return array[randomIndex];
@@ -31,24 +44,15 @@ function pickRandomElement(array) {
   const password = process.env.REDDIT_PASSWORD;
 
   subreddits = [
-    'Spanish',
     'Spanishhelp',
-    'learnspanish',
-    'languagelearningjerk',
     'LearnSpanishInReddit',
-    'duolingo',
     'language',
-    'language_exchange',
-    'Language_Exchange',
     'LanguageTechnology',
     'LanguageBuds',
     'LatinLanguage',
     'LearnANewLanguage',
-    'translator',
     'HindiLanguage',
     'French',
-    'FrenchMemes',
-    'learnfrench',
     'FrenchImmersion',
     'easy_french'
   ]
@@ -127,7 +131,7 @@ async function makeAComment(page, subreddit) {
     let activeUrl = ''
     while (retryCount < 3) { // Retry up to 3 times
       try {
-        await page.goto(`https://www.reddit.com/r/${subreddit}/new`, { waitUntil: 'networkidle0' });
+        await page.goto(`https://www.reddit.com/r/${subreddit}`, { waitUntil: 'networkidle0' });
 
         const aTags = await page.$$eval('a', anchors => anchors.map(anchor => anchor.outerHTML));
         // console.log(aTags)
@@ -169,6 +173,7 @@ async function makeAComment(page, subreddit) {
         console.log('retrying...', retryCount)
         retryCount += 1;
       }
+      return false;
     }
 
 
@@ -203,19 +208,24 @@ async function makeAComment(page, subreddit) {
 
     // // Click on the first comment to respond
 
-    // Write and submit a response
-    const textContainer = await page.waitForSelector('.public-DraftEditor-content')
-    console.log('container', textContainer)
 
-    const textInput5 = await page.waitForSelector('.public-DraftEditor-content div div div div span')
-    console.log('container4', textInput5)
+
+    // const replyButtons = await page.$('button:has-text("Reply")');
 
     await replyButtons.click()
 
     await new Promise(resolve => setTimeout(resolve, 10*1000));
 
+    // Write and submit a response
+    // const textContainer = await page.waitForSelector('.public-DraftEditor-content')
+    // console.log('container', textContainer)
+    
+    // const textInput5 = await page.waitForSelector('.public-DraftEditor-content div div div div span')
+    // console.log('container4', textInput5)
 
-    await textInput5.type(gpt_comment)
+    // await textInput5.type(gpt_comment)
+
+    await page.keyboard.type(gpt_comment)
 
     await page.keyboard.press('Tab');
     await page.keyboard.press('Enter');
@@ -223,6 +233,9 @@ async function makeAComment(page, subreddit) {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log('Response submitted successfully!');
+
+    await markUrlAsSuccess(activeUrl)
+
     return true;
 
   } catch (error) {
