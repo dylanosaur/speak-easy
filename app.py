@@ -347,7 +347,6 @@ def index():
 from flask import Flask, render_template, make_response
 import datetime
 
-app = Flask(__name__)
 
 @app.route('/sitemap.xml')
 def sitemap():
