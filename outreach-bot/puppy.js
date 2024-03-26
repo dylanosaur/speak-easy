@@ -133,6 +133,15 @@ async function makeAComment(page, subreddit) {
       try {
         await page.goto(`https://www.reddit.com/r/${subreddit}`, { waitUntil: 'networkidle0' });
 
+        await new Promise(resolve => setTimeout(resolve, 2*1000));
+
+        await page.evaluate(() => {
+          window.scrollBy(0, window.innerHeight); // Scroll down by the height of the viewport
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 1*1000));
+
+      
         const aTags = await page.$$eval('a', anchors => anchors.map(anchor => anchor.outerHTML));
         // console.log(aTags)
         const linksArray = aTags.map(html => {
@@ -192,11 +201,32 @@ async function makeAComment(page, subreddit) {
 
 
     // step three make the comment
-    const replyButtons = await page.waitForSelector('button ::-p-text(Reply)');
+    // const replyButtons = await page.waitForSelector('button ::-p-text(Reply)');
+
+    let refReplyButtons = await page.$$eval('button ::-p-text(Reply)', buttons => buttons);
+    let numberReplyButtons = refReplyButtons.length;
+    if (numberReplyButtons == 0) {
+      return false;
+    }
+    let randomIndex = Math.floor(Math.random() * Math.min(numberReplyButtons, 3));
+    // let randomIndex = 0;
+
+
+    // const replyButtons = await page.waitForSelector(`button ::-p-text(Reply):nth-of-type(${randomIndex})`, { timeout: 5000 });
+    let replyButtons = await page.$$('button ::-p-text(Reply)');
+    replyButtons = replyButtons[randomIndex]
     console.log(replyButtons)
+    // await new Promise(resolve => setTimeout(resolve, 2*1000));
+    // await replyButtons.click()
+    // await new Promise(resolve => setTimeout(resolve, 2*1000));
+
+    // console.log(replyButtons)
+    // let randomIndex = Math.floor(Math.random() * replyButtons.length);
+    // replyButtons = replyButtons[randomIndex]
+    // replyButtons.click()
 
     const commentContainer = await page.evaluate(replyButtons => {
-      return replyButtons.parentElement.parentElement.parentElement.textContent.trim();
+      return replyButtons.parentElement.parentElement.parentElement.parentElement.parentElement.textContent.trim().replace(/\n/g, '');
     }, replyButtons);
 
     console.log(commentContainer)
@@ -204,7 +234,9 @@ async function makeAComment(page, subreddit) {
     gpt_input = `community: ${subreddit} title ${text} post text ${postText} reply to this comment ${commentContainer}`
     let gpt_comment = await sendPostRequest(gpt_input, activeUrl)
     console.log('gpt comment', gpt_comment)
-
+    if (!gpt_comment) {
+      return false;
+    }
 
     // // Click on the first comment to respond
 

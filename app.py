@@ -344,23 +344,23 @@ def index():
     return render_template('index.html')
 
 
-# from flask import Flask, render_template, make_response
-# import datetime
+from flask import Flask, render_template, make_response
+import datetime
 
 
-# @app.route('/sitemap.xml')
-# def sitemap():
-#     # Current date in ISO 8601 format
-#     lastmod = datetime.datetime.now().isoformat()
+@app.route('/sitemap.xml')
+def sitemap():
+    # Current date in ISO 8601 format
+    lastmod = datetime.datetime.now().isoformat()
     
-#     # Render the sitemap template
-#     sitemap_xml = render_template('sitemap.xml', lastmod=lastmod)
+    # Render the sitemap template
+    sitemap_xml = render_template('sitemap.xml', lastmod=lastmod)
     
-#     # Create a response with the XML content type
-#     response = make_response(sitemap_xml)
-#     response.headers["Content-Type"] = "application/xml"
+    # Create a response with the XML content type
+    response = make_response(sitemap_xml)
+    response.headers["Content-Type"] = "application/xml"
     
-#     return response
+    return response
 
 
 
