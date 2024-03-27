@@ -160,7 +160,9 @@ def generate_gpt_response(user_input, target_language="spanish"):
             [
                 {"role": "system", "content": f"You are a tool to help someone learn {target_language}. \
                 Just respond in {target_language} and continue the conversation. \
-                Use beginner-intermediate level words and phrases and limit your response to one sentence and then one question"},
+                Use beginner-intermediate level words and phrases and limit your response to one sentence and then one question. \
+                If they dont ask a question then go ahead and pick some random topic and ask them a question.\
+                Dont ask them how you can help, just pick an interesting topic and try to engage them in conversation."},
             ]
         })
 
