@@ -343,10 +343,8 @@ def index():
         del session['conversation']
     return render_template('index.html')
 
-
 from flask import Flask, render_template, make_response
 import datetime
-
 
 @app.route('/sitemap.xml')
 def sitemap():
@@ -362,6 +360,53 @@ def sitemap():
     
     return response
 
+
+from flask import Flask, render_template
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+def get_build_and_count():
+    conn = sqlite3.connect('requests.db')  # Replace 'your_database.db' with your database file path
+    c = conn.cursor()
+    c.execute("SELECT build, count FROM requests")
+    data = c.fetchall()
+    conn.close()
+    return data
+
+@app.route('/plot_activity')
+def plot_activity():
+    # Calculate average and standard deviation for each buildhash
+    data = get_build_and_count()
+    print(data)
+    buildhashes = set([d['buildhash'] for d in data])
+    averages = []
+    std_devs = []
+    for buildhash in buildhashes:
+        counts = [d['count'] for d in data if d['buildhash'] == buildhash]
+        averages.append(np.mean(counts))
+        std_devs.append(np.std(counts))
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    plt.bar(range(len(buildhashes)), averages, yerr=std_devs, align='center', alpha=0.5, ecolor='black', capsize=10)
+    plt.xticks(range(len(buildhashes)), buildhashes)
+    plt.xlabel('Build Hash')
+    plt.ylabel('Average Count')
+    plt.title('Average Count and Standard Deviation for Each Build Hash')
+    plt.tight_layout()
+
+    # Save the plot to a temporary file
+    plot_path = 'static/plot.png'
+    plt.savefig(plot_path)
+
+    # Render the template with the plot
+    return render_template('plot.html', plot_path=plot_path)
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 
 # Main method to run the Flask app

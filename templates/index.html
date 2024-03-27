@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>speak-easy</title>
-    <description>Learn to speak a foreign language fluently through conversations</description>
     <meta name="keywords" content="spanish,french,polish,german,language,education,interactive,learn,learning,conversation,artificial intelligence,fluent">
     <style>
         body {
@@ -80,31 +79,53 @@
 
         gtag('config', 'G-0MB2XQHC30');
     </script>
+    <style>
+        .header-container {
+            display: flex; /* Use flexbox */
+        }
+
+        .box {
+            flex: 1; /* Each box will take equal space */
+            padding: 10px; /* Adjust padding as needed */
+            margin: 5px; /* Adjust margin as needed */
+        }
+
+        .gif-box {
+            max-width: 100px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <span>
-            Pick foreign language for your partner: 
-        </span>
-        <select id="language-select">
-            <option value="es-spanish">Spanish</option>
-            <option value="zh-chinese">Chinese</option>
-            <option value="hi-hindi">Hindi</option>
-            <option value="fr-french">French</option>
-            <option value="ar-arabic">Arabic</option>
-            <option value="ru-russian">Russian</option>
-            <option value="pt-portuguese">Portuguese</option>
-            <option value="bn-bengali">Bengali</option>
-            <option value="de-german">German</option>
-            <option value="ja-japanese">Japanese</option>
-            <option value="ja-japanese">Japanese</option>
-
-            <!-- You can add more options for other languages as needed -->
-        </select>
-        <span>
-            Once you send your first message the language is fixed. Refresh the page to set a new language.
-        </span>
+        <div class="header-container">
+            <div class="box">
+                <span>
+                    Pick foreign language for your partner: 
+                </span>
+                <select id="language-select">
+                    <option value="es-spanish">Spanish</option>
+                    <option value="zh-chinese">Chinese</option>
+                    <option value="hi-hindi">Hindi</option>
+                    <option value="fr-french">French</option>
+                    <option value="ar-arabic">Arabic</option>
+                    <option value="ru-russian">Russian</option>
+                    <option value="pt-portuguese">Portuguese</option>
+                    <option value="bn-bengali">Bengali</option>
+                    <option value="de-german">German</option>
+                    <option value="ja-japanese">Japanese</option>
+                    <option value="ja-japanese">Japanese</option>
         
+                    <!-- You can add more options for other languages as needed -->
+                </select>
+                <div style="height: 20px"></div>
+                <span>Start the conversation by saying hello!</span>
+                
+            </div>
+            <div class="box gif-box">
+                <div class="tenor-gif-embed" data-postid="11356849305969337115" data-share-method="host" data-aspect-ratio="1.08108" data-width="100%"><a href="https://tenor.com/view/catusjksk-gif-11356849305969337115">Catusjksk GIF</a>from <a href="https://tenor.com/search/catusjksk-gifs">Catusjksk GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+            </div>
+        </div>
+
         <div class="conversation">
             <!-- Conversation messages will be displayed here -->
         </div>
