@@ -381,6 +381,7 @@ def plot_activity():
     # Calculate average and standard deviation for each buildhash
     data = get_build_and_count()
     print(data)
+    data = [{'buildhash': x[0], 'count':x[1]} for x in data]
     buildhashes = set([d['buildhash'] for d in data])
     averages = []
     std_devs = []
