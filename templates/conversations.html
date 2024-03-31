@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Conversations</title>
+</head>
+<body>
+    <h1>Conversations</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User ID</th>
+                <th>Timestamp</th>
+                <th>Messages</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for conversation in conversations %}
+            <tr>
+                <td>{{ conversation[0] }}</td>
+                <td>{{ conversation[1] }}</td>
+                <td>{{ conversation[2] }}</td>
+                <td>{{ conversation[3] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

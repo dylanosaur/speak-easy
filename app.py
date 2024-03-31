@@ -6,16 +6,50 @@ import numpy as np
 import datetime
 import os
 import json
-from ai_generator import openai_client, translate_text, generate_gpt_response
+from ai_generator import openai_client, translate_text, generate_gpt_response, generate_daily_prompt
 from bot_comments import bot_comments
 from logger import app_logger, headers_logger
-from util import hash_ip, build_hash
-from db import Requests, ThreadComments, create_table, DB_FILE
+from util import hash_ip, get_build_hash
+from db import Requests, ThreadComments, Builds, Users, Conversations, Prompts, create_table, DB_FILE
 
 
 requests_handle = Requests()
 thread_comments_handle = ThreadComments()
+builds_handle = Builds()
+conversations_handle = Conversations()
+prompts_handle = Prompts()
 create_table()
+
+prompts = prompts_handle.get_latest()
+if not prompts:
+    prompts_handle.insert("You are a tool to help someone learn {target_language}. \
+                Just respond in {target_language} and continue the conversation. \
+                Use beginner-intermediate level words and phrases and limit your response to one sentence and then one question. \
+                If they dont ask a question then go ahead and pick some random topic and ask them a question.\
+                Dont ask them how you can help, just pick an interesting topic and try to engage them in conversation. Todays topic will be:", 
+                0,
+                "You are a tool to help someone learn {target_language}. \
+                Just respond in {target_language} and continue the conversation. \
+                Use beginner-intermediate level words and phrases and limit your response to one sentence and then one question. \
+                If they dont ask a question then go ahead and pick some random topic and ask them a question.\
+                Dont ask them how you can help, just pick an interesting topic and try to engage them in conversation.",
+                "Todays topic will be: camping.")
+
+todays_prompts = prompts_handle.get_prompts_from_today()
+if todays_prompts:
+    latest_prompt_row = prompts_handle.get_latest()
+    latest_prompt_prefix = latest_prompt_row[5]
+    latest_prompt_topics = latest_prompt_row[6]
+    print('latest prompt topic', latest_prompt_topics)
+
+    new_prompt_topics = generate_daily_prompt(latest_prompt_topics)
+    new_prompt = latest_prompt_prefix+new_prompt_topics
+    prompts_handle.insert(new_prompt, 0, latest_prompt_prefix, new_prompt_topics)
+    print('new prompt for today', new_prompt)
+
+# log build hash
+build_hash = get_build_hash()
+builds_handle.insert_if_not_exists(build_hash)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -27,12 +61,7 @@ def log_request(func):
     @wraps(func)
     def wrapper(*args, **kwargs):        
         create_table()
-        ip_address = request.remote_addr
-        try:
-            ip_address = request.headers['X-Real-IP']
-        except:
-            print('unable to extract ip', request.headers)
-        ip_address = hash_ip(ip_address)
+        ip_address = hash_ip()
         requests_handle.log_user(ip_address, build_hash)
         return func(*args, **kwargs)
     return wrapper
@@ -81,7 +110,10 @@ def index():
         print('unable to log headers', ex)
     if 'conversation' in session:
         del session['conversation']
-    return render_template('index.html')
+    todays_prompt_row = prompts_handle.get_latest()
+    todays_topics = todays_prompt_row[6]
+    print(todays_prompt_row)
+    return render_template('index.html', topics=todays_topics)
 
 
 @app.route('/sitemap.xml')
@@ -138,6 +170,13 @@ def plot_activity():
 
     # Render the template with the plot
     return render_template('plot.html', plot_path=plot_path)
+
+
+@app.route('/conversations')
+def view_conversations():
+    conversations = conversations_handle.get_all()
+    return render_template('conversations.html', conversations=conversations)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

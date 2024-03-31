@@ -1,6 +1,11 @@
 import hashlib
+from flask import request
 
-def hash_ip(ip_address):
+def hash_ip():
+    try:
+        ip_address = request.headers['X-Real-IP']
+    except:
+        ip_address = '127.0.0.1'
     # Convert IP address to bytes
     ip_bytes = ip_address.encode('utf-8')
 
@@ -10,5 +15,10 @@ def hash_ip(ip_address):
     return hashed_ip
 
 import subprocess
-build_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'])[:6].decode()
+
+def get_build_hash():
+    hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'])[:6].decode()
+    return hash
+
+build_hash = get_build_hash()
 print('build hash', build_hash)

@@ -1,6 +1,7 @@
 
 import sqlite3
 from flask import request
+from util import get_build_hash
 
 # SQLite database file path
 DB_FILE = 'requests.db'
@@ -16,7 +17,7 @@ def create_table():
 
     c.execute('''CREATE TABLE IF NOT EXISTS prompts
              (id INTEGER PRIMARY KEY, prompt TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-             score INTEGER, enabled INTEGER)''')
+             score INTEGER, enabled INTEGER, prompt_prefix TEXT, prompt_topics TEXT)''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS builds
              (id INTEGER PRIMARY KEY, git_hash TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
@@ -25,10 +26,127 @@ def create_table():
              (id INTEGER PRIMARY KEY, cohort_hash TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS conversations
-             (id INTEGER PRIMARY KEY, user INTEGER, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, messages TEXT)''')
+             (id INTEGER PRIMARY KEY, user TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, messages TEXT)''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS translations
+             (id INTEGER PRIMARY KEY, user TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+              input TEXT, output TEXT, lang TEXT)''')
       
     conn.commit()
     conn.close()
+
+
+class Translations:
+    def __init__(self):
+        self.db = DB_FILE
+
+    def insert(self, user, input, output, lang):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("INSERT INTO Translations (user, input, output, lang) VALUES (?, ?, ?, ?)", (user, input, output, lang))
+            conn.commit()   
+
+class Builds:
+    def __init__(self):
+        self.db = DB_FILE
+
+    def insert(self, git_hash):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("INSERT INTO builds (git_hash) VALUES (?)", (git_hash,))
+            conn.commit()
+    
+    def insert_if_not_exists(self, git_hash):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            # Check if the git_hash already exists in the database
+            c.execute("SELECT COUNT(*) FROM builds WHERE git_hash = ?", (git_hash,))
+            count = c.fetchone()[0]
+            if count == 0:
+                # If git_hash does not exist, insert it
+                c.execute("INSERT INTO builds (git_hash) VALUES (?)", (git_hash,))
+                conn.commit()
+
+class Users:
+    def __init__(self):
+        self.db = DB_FILE
+
+    def insert(self, cohort_hash):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("INSERT INTO users (cohort_hash) VALUES (?)", (cohort_hash,))
+            conn.commit()
+
+class Conversations:
+    def __init__(self):
+        self.db = DB_FILE
+
+    def insert(self, user_id, messages):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("INSERT INTO conversations (user, messages) VALUES (?, ?)", (user_id, messages))
+            conn.commit()
+            # Return the ID of the inserted conversation
+            return c.lastrowid
+
+    def query_by_id(self, conversation_id):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+            return c.fetchone()
+
+    def update_by_id(self, conversation_id, new_messages):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("UPDATE conversations SET messages = ? WHERE id = ?", (new_messages, conversation_id))
+            conn.commit()
+    
+    def get_all(self):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM conversations")
+            conversations = c.fetchall()
+        return conversations
+
+
+import datetime
+class Prompts:
+    
+    def __init__(self):
+        self.db = DB_FILE
+
+    def get_all(self):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM prompts")
+            return c.fetchall()
+
+    def get_latest(self):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM prompts ORDER BY timestamp DESC LIMIT 1")
+            return c.fetchone()
+
+    def get_highest_score(self):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("SELECT * FROM prompts ORDER BY score DESC LIMIT 1")
+            return c.fetchone()
+
+    def insert(self, prompt_text, score, prompt_prefix, prompt_topics, enabled=1):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            c.execute("INSERT INTO prompts (prompt, score, enabled, prompt_prefix, prompt_topics) VALUES (?, ?, ?, ?, ?)", (prompt_text, score, enabled, prompt_prefix, prompt_topics))
+            conn.commit()
+
+    def get_prompts_from_today(self):
+        with sqlite3.connect(self.db) as conn:
+            c = conn.cursor()
+            today_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            # Execute the query
+            c.execute("SELECT * FROM prompts WHERE DATE(timestamp) = ?", (today_date,))
+            prompts_today = c.fetchall()
+            return prompts_today
 
 class Requests:
     

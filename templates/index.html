@@ -40,13 +40,14 @@
             display: flex;
         }
         input[type="text"] {
+            max-width: 150px;
             flex-grow: 1;
             padding: 10px;
             border-radius: 5px;
             border: 1px solid #ccc;
         }
         input[type="submit"] {
-            padding: 10px 20px;
+            padding: 10px 10px;
             background-color: #007bff;
             color: #fff;
             border: none;
@@ -100,6 +101,11 @@
         <div class="header-container">
             <div class="box">
                 <span>
+                    This app uses OpenAI's GPT 3.5 turbo for both the translations and conversation. 
+                    The topic changes daily. You can mix your primary language with the language you want to learn
+                    and the AI will provide corrections. <br> <br>
+                </span>
+                <span>
                     Pick foreign language for your partner: 
                 </span>
                 <select id="language-select">
@@ -113,12 +119,11 @@
                     <option value="bn-bengali">Bengali</option>
                     <option value="de-german">German</option>
                     <option value="ja-japanese">Japanese</option>
-                    <option value="ja-japanese">Japanese</option>
         
                     <!-- You can add more options for other languages as needed -->
                 </select>
                 <div style="height: 20px"></div>
-                <span>Start the conversation by saying hello!</span>
+                <span>Todays focus will be: {{topics}} <br> <br> Start the conversation by saying hello! </span>
                 
             </div>
             <div class="box gif-box">
@@ -132,8 +137,8 @@
         <form id="message-form">
             <div class="input-container">
                 <input type="text" id="user-input" placeholder="Type your message...">
+                <!-- <input type="submit" value="Send"> -->
                 <input type="submit" value="Send">
-                <input type="submit" value="Translate">
             </div>
         </form>
     </div>
@@ -164,17 +169,11 @@
                 let response;
                 console.log(event.target, event.target.value)
                 if (event.target.value == 'Send') {
-                    console.log('using /send')
-                    appendMessage('user', userMessage);
-                    userInput.value = '';
-                    response = await sendMessage(userMessage, '/ask');
-                } else if (event.target.value == 'Translate') {
                     console.log('using /translate_and ask')
                     appendMessage('user', userMessage);
                     userInput.value = '';
                     response = await sendMessage(userMessage, '/translate_and_ask');
-                    appendMessage('user', response.translated_user_input);
-
+                    appendMessage('user', '(corrected) '+ response.translated_user_input);
                 } else {
                     return
                 }
