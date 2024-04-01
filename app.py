@@ -36,7 +36,7 @@ if not prompts:
                 "Todays topic will be: camping.")
 
 todays_prompts = prompts_handle.get_prompts_from_today()
-if todays_prompts:
+if not todays_prompts:
     latest_prompt_row = prompts_handle.get_latest()
     latest_prompt_prefix = latest_prompt_row[5]
     latest_prompt_topics = latest_prompt_row[6]
