@@ -35,17 +35,21 @@ if not prompts:
                 Dont ask them how you can help, just pick an interesting topic and try to engage them in conversation.",
                 "Todays topic will be: camping.")
 
-todays_prompts = prompts_handle.get_prompts_from_today()
-if not todays_prompts:
-    latest_prompt_row = prompts_handle.get_latest()
-    latest_prompt_prefix = latest_prompt_row[5]
-    latest_prompt_topics = latest_prompt_row[6]
-    print('latest prompt topic', latest_prompt_topics)
+def update_daily_prompt():
+    todays_prompts = prompts_handle.get_prompts_from_today()
+    if not todays_prompts:
+        latest_prompt_row = prompts_handle.get_latest()
+        latest_prompt_prefix = latest_prompt_row[5]
+        latest_prompt_topics = latest_prompt_row[6]
+        print('latest prompt topic', latest_prompt_topics)
 
-    new_prompt_topics = generate_daily_prompt(latest_prompt_topics)
-    new_prompt = latest_prompt_prefix+new_prompt_topics
-    prompts_handle.insert(new_prompt, 0, latest_prompt_prefix, new_prompt_topics)
-    print('new prompt for today', new_prompt)
+        new_prompt_topics = generate_daily_prompt(latest_prompt_topics)
+        new_prompt = latest_prompt_prefix+new_prompt_topics
+        prompts_handle.insert(new_prompt, 0, latest_prompt_prefix, new_prompt_topics)
+        print('new prompt for today', new_prompt)
+    return todays_prompts
+
+todays_prompts = update_daily_prompt()
 
 # log build hash
 build_hash = get_build_hash()
@@ -104,6 +108,9 @@ def translate_and_ask():
 
 @app.route('/', methods=['GET'])
 def index():
+    todays_prompts = update_daily_prompt()
+
+    
     try:
         headers_logger.debug(json.dumps(dict(request.headers)))
     except Exception as ex:
